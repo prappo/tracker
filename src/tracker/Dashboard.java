@@ -1,12 +1,27 @@
 package tracker;
 
+import java.awt.AWTException;
+import java.awt.CheckboxMenuItem;
 import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.Image;
+import java.awt.Menu;
+import java.awt.MenuItem;
+import java.awt.PopupMenu;
 import java.awt.Rectangle;
 import java.awt.Robot;
+import java.awt.SystemTray;
 import java.awt.Toolkit;
+import java.awt.TrayIcon;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -33,6 +48,7 @@ import java.text.*;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.WindowConstants;
 //mouse tracking
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
@@ -43,6 +59,7 @@ import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 //importing my files
 import tracker.Var;
+import java.sql.*;
 
 /**
  *
@@ -56,9 +73,12 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
     /**
      * Creates new form Dashboard
      */
-    public Dashboard() {
+    public Dashboard() throws MalformedURLException, AWTException {
 
         initComponents();
+        this.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+        trackerTray();
+
         name.setText(Var.tUserName);
         Var.firstClick = false;
         Var.timerPused = false;
@@ -94,26 +114,51 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         checkConnection.start();
         String projects = "Optimus Prime,Niomika,Tracker";
         //sending data
-        Thread sendData = new Thread() {
+        Thread sd = new Thread() {
             @Override
             public void run() {
                 while (true) {
-                    try {
-                        if (sendData().equals("success")) {
-                            status("Tracker sent you data to client");
+                    if (Var.timerStart) {
+                        Var.tProject = txtProjects.getSelectedItem().toString();
+                        Var.tTime = timerText.getText();
+
+                        try {
+                            if (sendData().equals("success")) {
+                                status("Tracker sent data to client");
+                            } 
+                            else if(sendData().equals("error")){
+                                JOptionPane.showMessageDialog(null, "We got error response");
+                            }
+                            else {
+//                                backup();
+                                status("Seomething went wrong , we couldn't sent data to client");
+                            }
+                        } catch (UnsupportedEncodingException ex) {
+                            Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
+                            backup();
+                            status("Seomething went wrong , we cna't sent data to client");
+                        } catch (ProtocolException ex) {
+                            Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
+                            backup();
+                            status("Seomething went wrong , we cna't sent data to client");
+                        } catch (IOException ex) {
+                            Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
+                            backup();
+                            status("Seomething went wrong , we cna't sent data to client");
                         }
-                        Thread.sleep(randomNumber());
-                    } catch (Exception ss) {
-                        ss.printStackTrace();
 
                     }
-
+                    try {
+                        Thread.sleep(randomNumber());
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
             }
         };
+        sd.start();
 
-        sendData.start();
-
+        // visibility 
         String[] projectLists = projects.split(",");
         for (String pro : projectLists) {
             txtProjects.addItem(pro);
@@ -145,7 +190,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         int Low = 5;
         int High = 10;
         int Result = r.nextInt(High - Low) + Low;
-        return Result * 600;
+        return Result * 6000;
     }
 
     // taking screenshot 
@@ -175,9 +220,29 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
     private String sendData() throws MalformedURLException, UnsupportedEncodingException, ProtocolException, IOException {
 
+        File file = new File("me.jpg");
+
+        try {
+            // Reading a Image file from file system
+            FileInputStream imageInFile = new FileInputStream(file);
+            byte imageData[] = new byte[(int) file.length()];
+            imageInFile.read(imageData);
+
+            // Converting Image byte array into Base64 String
+            String imageDataString = encodeImage(imageData);
+
+            Var.imgData = imageDataString;
+
+            System.out.println("Image Successfully Manipulated!");
+        } catch (FileNotFoundException e) {
+            System.out.println("Image not found" + e);
+        } catch (IOException ioe) {
+            System.out.println("Exception while reading the Image " + ioe);
+        }
+        
         URL url = new URL(Var.tPostUrl);
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("user", Var.tUserName);
+        params.put("email", Var.tUserName);
         params.put("time", timerText.getText());
         params.put("project", txtProjects.getSelectedItem());
         params.put("performance", "pending");
@@ -185,6 +250,9 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         params.put("tKey", Var.keyPressed);
         params.put("tDrag", Var.mDrags);
         params.put("tClicks", Var.mClicks);
+//        params.put("imgData", Var.imgData);
+
+        
 
         StringBuilder postData = new StringBuilder();
         for (Map.Entry<String, Object> param : params.entrySet()) {
@@ -229,10 +297,122 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                 jLabel9.setText("Screenshot:" + ft.format(dNow));
                 System.out.println("Screenshot taken at " + ft.format(dNow));
                 Var.imgFileName = fileName;
+                imgView.setIcon(new ImageIcon(new ImageIcon(fileName).getImage().getScaledInstance(225, 123, Image.SCALE_DEFAULT)));
 
             } catch (Exception e) {
                 status("Error while taking screenshot");
             }
+        }
+    }
+
+    public static String encodeImage(byte[] imageByteArray) {
+        return org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(imageByteArray);
+    }
+
+    protected static PopupMenu createPopupMenu() {
+        final PopupMenu popup = new PopupMenu();
+
+        MenuItem StartItem = new MenuItem("Start");
+        MenuItem StopItem = new MenuItem("Stop");
+        MenuItem OpenItem = new MenuItem("Open");
+        MenuItem ExitItem = new MenuItem("Exit");
+        // Add components to pop-up menu
+        StartItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Var.timerStart = true;
+            }
+        });
+
+        OpenItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Var.trackerHide = false;
+            }
+        });
+
+        ExitItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        });
+
+        popup.add(StartItem);
+        popup.add(StopItem);
+        popup.addSeparator();
+        popup.add(OpenItem);
+        popup.addSeparator();
+        popup.add(ExitItem);
+        return popup;
+    }
+
+    protected static void trackerTray() throws MalformedURLException, AWTException {
+        final Frame frame = new Frame("");
+        frame.setUndecorated(true);
+        // Check the SystemTray is supported
+        if (!SystemTray.isSupported()) {
+            System.out.println("SystemTray is not supported");
+            return;
+        }
+        final TrayIcon trayIcon = new TrayIcon(Toolkit.getDefaultToolkit().getImage("icon.png"), "Tracker running");
+
+        trayIcon.setImageAutoSize(true);
+        final SystemTray tray = SystemTray.getSystemTray();
+
+        // Create a pop-up menu components
+        final PopupMenu popup = createPopupMenu();
+        trayIcon.setPopupMenu(popup);
+        trayIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    frame.add(popup);
+                    popup.show(frame, e.getXOnScreen(), e.getYOnScreen());
+                }
+            }
+        });
+        try {
+            frame.setResizable(false);
+            frame.setVisible(true);
+            tray.add(trayIcon);
+        } catch (AWTException e) {
+            System.out.println("TrayIcon could not be added.");
+        }
+    }
+
+    private void backup() {
+
+        int tClicks = Var.mClicks;
+        int tDrag = Var.mDrags;
+        int tKey = Var.keyPressed;
+        String performance = Var.performance;
+        String time = Var.tTime;
+        String user = Var.tUserName;
+        String project = Var.tProject;
+        String screenShot = Var.imgFileName;
+
+        Connection c = null;
+        Statement stmt = null;
+        try {
+            Class.forName("org.sqlite.JDBC");
+            c = DriverManager.getConnection("jdbc:sqlite:Tracker.db");
+            c.setAutoCommit(false);
+            System.out.println("Opened database successfully");
+
+            stmt = c.createStatement();
+            String sql = "INSERT INTO backup (tClicks,tDrag,tKey,performance,time,user,project,screenShot) "
+                    + "VALUES ('" + tClicks + "','" + tDrag + "','" + tKey + "','" + performance + "','" + time + "','" + user + "','" + project + "','" + screenShot + "');";
+            stmt.executeUpdate(sql);
+
+            stmt.close();
+            c.commit();
+            c.close();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Something went wrong , couldn't take backup");
+            System.err.println(e.getClass().getName() + ": " + e.getMessage());
+            System.out.println(e.getMessage());
+
         }
     }
 
@@ -260,6 +440,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         jLabel9 = new javax.swing.JLabel();
         iconOnline = new javax.swing.JLabel();
         iconOffline = new javax.swing.JLabel();
+        imgView = new javax.swing.JLabel();
         Status = new javax.swing.JTabbedPane();
         jScrollPane2 = new javax.swing.JScrollPane();
         projectDetails = new javax.swing.JTextArea();
@@ -269,10 +450,10 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
-        jLabel8 = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenuItem3 = new javax.swing.JMenuItem();
+        logOut = new javax.swing.JMenuItem();
         jMenuItem1 = new javax.swing.JMenuItem();
         jMenu3 = new javax.swing.JMenu();
         jMenuItem2 = new javax.swing.JMenuItem();
@@ -283,7 +464,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
         name.setText("prappo");
 
-        timerText.setFont(new java.awt.Font("Droid Sans Mono for Powerline", 0, 12)); // NOI18N
+        timerText.setFont(new java.awt.Font("Arial", 0, 36)); // NOI18N
         timerText.setText("0 : 0 : 0");
 
         btnTimer.setText("Start");
@@ -313,10 +494,6 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
         txtKeyboard.setText("Keyboard Activity");
 
-        jLabel7.setIcon(new javax.swing.ImageIcon("/home/prappo/NetBeansProjects/Tracker/src/tracker/assets/img/193fc323-e8b5-4552-8e76-313d114e6e67.png")); // NOI18N
-
-        jLabel6.setIcon(new javax.swing.ImageIcon("/home/prappo/NetBeansProjects/Tracker/src/tracker/assets/img/98878b38-0eaa-4074-9342-f1470a78a69e_13.png")); // NOI18N
-
         jLabel9.setText("Screenshot Status");
         jLabel9.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
 
@@ -335,25 +512,33 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(32, 32, 32)
+                        .addComponent(imgView, javax.swing.GroupLayout.PREFERRED_SIZE, 227, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 22, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                                    .addComponent(jLabel7)
-                                    .addGap(27, 27, 27)
-                                    .addComponent(txtMouse)
-                                    .addGap(12, 12, 12))
-                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                    .addComponent(txtKeyboard)))
                             .addGroup(jPanel2Layout.createSequentialGroup()
-                                .addComponent(iconOffline)
+                                .addGap(135, 135, 135)
+                                .addComponent(jLabel7)
+                                .addGap(102, 102, 102))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(iconOnline)))
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap())
+                                .addComponent(jLabel9, javax.swing.GroupLayout.DEFAULT_SIZE, 292, Short.MAX_VALUE)
+                                .addContainerGap())))))
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(iconOffline)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(iconOnline))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(17, 17, 17)
+                        .addComponent(txtKeyboard)
+                        .addGap(39, 39, 39)
+                        .addComponent(txtMouse)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -362,18 +547,20 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(iconOnline)
                     .addComponent(iconOffline))
-                .addGap(21, 21, 21)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(imgView, javax.swing.GroupLayout.PREFERRED_SIZE, 123, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtKeyboard)
+                    .addComponent(txtMouse))
+                .addGap(5, 5, 5)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel7)
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGap(8, 8, 8)
-                        .addComponent(txtMouse)))
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtKeyboard))
-                .addGap(34, 34, 34)
-                .addComponent(jLabel9)
-                .addContainerGap(48, Short.MAX_VALUE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(jLabel7)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jLabel9)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         projectDetails.setEditable(false);
@@ -392,7 +579,6 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
         Status.addTab("Logs", jScrollPane1);
 
-        jLabel4.setForeground(java.awt.Color.black);
         jLabel4.setText("Copyright © 2016 VarDump");
 
         jLabel2.setText("Hou");
@@ -400,8 +586,6 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         jLabel3.setText("Min");
 
         jLabel5.setText("Sec");
-
-        jLabel8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/tracker/assets/img/clock.png"))); // NOI18N
 
         jMenu1.setText("File");
 
@@ -412,6 +596,14 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
             }
         });
         jMenu1.add(jMenuItem3);
+
+        logOut.setText("Logout");
+        logOut.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                logOutActionPerformed(evt);
+            }
+        });
+        jMenu1.add(logOut);
 
         jMenuItem1.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Q, java.awt.event.InputEvent.CTRL_MASK));
         jMenuItem1.setText("Exit");
@@ -427,6 +619,11 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         jMenu3.setText("Settings");
 
         jMenuItem2.setText("Settings");
+        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem2ActionPerformed(evt);
+            }
+        });
         jMenu3.add(jMenuItem2);
 
         jMenuBar1.add(jMenu3);
@@ -450,33 +647,38 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                                 .addGap(84, 84, 84)
                                 .addComponent(jLabel4))
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(96, 96, 96)
-                                .addComponent(txtProjects, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(124, 124, 124)
-                                .addComponent(btnTimer, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
                                 .addGap(64, 64, 64)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jLabel8)
-                                        .addGap(26, 26, 26)
-                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addGroup(layout.createSequentialGroup()
-                                                .addComponent(jLabel2)
-                                                .addGap(35, 35, 35)
-                                                .addComponent(jLabel3)
-                                                .addGap(37, 37, 37)
-                                                .addComponent(jLabel5))
-                                            .addComponent(timerText)
-                                            .addGroup(layout.createSequentialGroup()
-                                                .addComponent(jLabel1)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(name))))
                                     .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE))))
                         .addGap(0, 54, Short.MAX_VALUE)))
                 .addContainerGap())
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(txtProjects, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(105, 105, 105))
+            .addGroup(layout.createSequentialGroup()
+                .addGap(136, 136, 136)
+                .addComponent(btnTimer, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap(82, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addComponent(jLabel2)
+                        .addGap(35, 35, 35)
+                        .addComponent(jLabel3)
+                        .addGap(37, 37, 37)
+                        .addComponent(jLabel5)
+                        .addGap(118, 118, 118))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(name)
+                        .addGap(135, 135, 135))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addComponent(timerText, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(76, 76, 76))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -486,10 +688,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                     .addComponent(jLabel1)
                     .addComponent(name))
                 .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(timerText)
-                    .addComponent(jLabel8))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(timerText)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(jLabel3)
@@ -501,11 +700,11 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnTimer)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 12, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(Status, javax.swing.GroupLayout.DEFAULT_SIZE, 96, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
+                .addComponent(Status, javax.swing.GroupLayout.DEFAULT_SIZE, 119, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel4)
                 .addGap(10, 10, 10))
@@ -567,8 +766,11 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
         } else {
             Var.timerStart = false;
-
+            txtProjects.setEnabled(true);
             btn.setText("Start");
+            if (!Var.tProject.equals(txtProjects.getSelectedItem())) {
+                Var.tProject = (String) txtProjects.getSelectedItem();
+            }
 
             status("Tracker Stoped");
 
@@ -609,8 +811,34 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
     private void jMenuItem3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem3ActionPerformed
         // TODO add your handling code here:
+        Var.timerStart = false;
+        projectDetails.setEnabled(true);
 
+        Var.timerStop = true;
+        btnTimer.setSelected(false);
+        btnTimer.setText("Start");
+        timerText.setText("0 : 0 : 0");
+        Var.hours = 0;
+        Var.minutes = 0;
+        Var.sec = 0;
     }//GEN-LAST:event_jMenuItem3ActionPerformed
+
+    private void logOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_logOutActionPerformed
+        if (Var.timerStart) {
+            JOptionPane.showMessageDialog(null, "You have to stop your work first to logout \n To Stop Your work go to Menu File > Stop Work ");
+        } else {
+            Var.timerStart = false;
+            this.setVisible(false);
+
+            new Tracker().setVisible(true);
+        }        // TODO add your handling code here:
+    }//GEN-LAST:event_logOutActionPerformed
+
+    private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem2ActionPerformed
+        // TODO add your handling code here:
+        new Settings().setVisible(true);
+
+    }//GEN-LAST:event_jMenuItem2ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -643,7 +871,13 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Dashboard().setVisible(true);
+                try {
+                    new Dashboard().setVisible(true);
+                } catch (MalformedURLException ex) {
+                    Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (AWTException ex) {
+                    Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
             }
 
@@ -658,6 +892,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
     private javax.swing.JToggleButton btnTimer;
     public static javax.swing.JLabel iconOffline;
     public static javax.swing.JLabel iconOnline;
+    private javax.swing.JLabel imgView;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -665,7 +900,6 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu3;
@@ -678,6 +912,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JSeparator jSeparator2;
+    private javax.swing.JMenuItem logOut;
     public static javax.swing.JLabel name;
     private javax.swing.JTextArea projectDetails;
     private javax.swing.JLabel timerText;

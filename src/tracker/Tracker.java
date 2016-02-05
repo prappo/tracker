@@ -30,6 +30,8 @@ import static tracker.Dashboard.iconOffline;
 import static tracker.Dashboard.iconOnline;
 import tracker.Var;
 
+import java.sql.*;
+
 /**
  *
  * @author prappo
@@ -41,6 +43,7 @@ public class Tracker extends javax.swing.JFrame {
      */
     public Tracker() {
         initComponents();
+        
         setResizable(false);
         Thread checkconnection;
         checkconnection = new Thread() {
@@ -51,6 +54,8 @@ public class Tracker extends javax.swing.JFrame {
                         if (checkConnection().equals("success")) {
 
                             jProgressBar2.setString("Connected");
+                            connectionStatus.setForeground(Color.green);
+                            connectionStatus.setText("Connected now");
                             Thread.sleep(200);
                             jProgressBar2.setValue(100);
                             Thread.sleep(500);
@@ -117,10 +122,8 @@ public class Tracker extends javax.swing.JFrame {
         setTitle("Tracker");
         setBackground(javax.swing.UIManager.getDefaults().getColor("Button.shadow"));
 
-        jLabel1.setForeground(java.awt.Color.black);
-        jLabel1.setText("Username");
+        jLabel1.setText("Email");
 
-        jLabel2.setForeground(java.awt.Color.black);
         jLabel2.setText("Password");
 
         userName.setToolTipText("Username");
@@ -128,7 +131,6 @@ public class Tracker extends javax.swing.JFrame {
         password.setToolTipText("Password");
 
         jLabel3.setFont(new java.awt.Font("Droid Sans", 1, 18)); // NOI18N
-        jLabel3.setForeground(java.awt.Color.black);
         jLabel3.setText("Tracker");
 
         loginBtn.setBackground(java.awt.Color.lightGray);
@@ -139,7 +141,6 @@ public class Tracker extends javax.swing.JFrame {
             }
         });
 
-        jLabel4.setForeground(java.awt.Color.black);
         jLabel4.setText("Copyright © 2016 VarDump");
 
         jProgressBar2.setString("");
@@ -174,6 +175,11 @@ public class Tracker extends javax.swing.JFrame {
 
         jMenuItem2.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, java.awt.event.InputEvent.CTRL_MASK));
         jMenuItem2.setText("Work Offline");
+        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem2ActionPerformed(evt);
+            }
+        });
         jMenu1.add(jMenuItem2);
 
         jMenuItem3.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Q, java.awt.event.InputEvent.CTRL_MASK));
@@ -191,6 +197,11 @@ public class Tracker extends javax.swing.JFrame {
 
         jMenuItem1.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_U, java.awt.event.InputEvent.CTRL_MASK));
         jMenuItem1.setText("Url Settings");
+        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem1ActionPerformed(evt);
+            }
+        });
         jMenu2.add(jMenuItem1);
 
         jMenuBar1.add(jMenu2);
@@ -207,16 +218,15 @@ public class Tracker extends javax.swing.JFrame {
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
                                 .addGap(54, 54, 54)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jLabel2)
-                                        .addComponent(jLabel1)
-                                        .addComponent(userName)
-                                        .addComponent(password, javax.swing.GroupLayout.PREFERRED_SIZE, 185, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGroup(layout.createSequentialGroup()
-                                            .addGap(54, 54, 54)
-                                            .addComponent(jLabel3)))
-                                    .addComponent(loginBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 67, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(jLabel2)
+                                    .addComponent(jLabel1)
+                                    .addComponent(userName)
+                                    .addComponent(password, javax.swing.GroupLayout.PREFERRED_SIZE, 185, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(54, 54, 54)
+                                        .addComponent(jLabel3))
+                                    .addComponent(loginBtn)))
                             .addGroup(layout.createSequentialGroup()
                                 .addGap(65, 65, 65)
                                 .addComponent(jLabel4)))
@@ -255,9 +265,9 @@ public class Tracker extends javax.swing.JFrame {
     private String login(String user, String pass) {
         String msg = "";
         try {
-            URL url = new URL(Var.tPostUrl);
+            URL url = new URL(Var.tUrlLogin);
             Map<String, Object> params = new LinkedHashMap<>();
-            params.put("user", user);
+            params.put("email", user);
             params.put("password", pass);
 
             StringBuilder postData = new StringBuilder();
@@ -299,7 +309,14 @@ public class Tracker extends javax.swing.JFrame {
 
         if (login(user, pass).equals("success")) {
 
-            new Dashboard().setVisible(true);
+            try {
+                userBackup(user,pass);
+                new Dashboard().setVisible(true);
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (AWTException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            }
             this.setVisible(false);
             Var.tUserName = user;
             Var.tPasswrod = pass;
@@ -312,10 +329,58 @@ public class Tracker extends javax.swing.JFrame {
 
     }//GEN-LAST:event_loginBtnActionPerformed
 
+    private void userBackup(String uName, String pass){
+        Connection c = null;
+    Statement stmt = null;
+    try {
+      Class.forName("org.sqlite.JDBC");
+      c = DriverManager.getConnection("jdbc:sqlite:Tracker.db");
+      c.setAutoCommit(false);
+      System.out.println("Opened database successfully");
+
+      stmt = c.createStatement();
+      String sql = "UPDATE user set USERNAME = '"+uName+"',PASSWORD = '"+pass+"'  where ID='tracker';";
+      stmt.executeUpdate(sql);
+      c.commit();
+
+      stmt.close();
+      c.close();
+    } catch ( Exception e ) {
+      System.err.println( e.getClass().getName() + ": " + e.getMessage() );
+      
+    }
+    }
+    
     private void jMenuItem3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem3ActionPerformed
         // TODO add your handling code here:
         System.exit(0);
     }//GEN-LAST:event_jMenuItem3ActionPerformed
+
+    private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem1ActionPerformed
+        // TODO add your handling code here:
+        new Settings().setVisible(true);
+       
+    }//GEN-LAST:event_jMenuItem1ActionPerformed
+
+    private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem2ActionPerformed
+        Var.offline = true;
+        Var.online = false;
+        if(Var.backupUserName.equals("tDemot")){
+            JOptionPane.showMessageDialog(null,"Ops ! Didn't find any offline acivity");
+        }
+        else{
+            Var.tUserName = Var.backupUserName;
+            try {
+                new Dashboard().setVisible(true);
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (AWTException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            this.setVisible(false);
+            
+        }
+    }//GEN-LAST:event_jMenuItem2ActionPerformed
 
     /**
      * @param args the command line arguments
