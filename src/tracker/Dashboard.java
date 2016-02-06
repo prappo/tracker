@@ -19,9 +19,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -125,11 +127,9 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                         try {
                             if (sendData().equals("success")) {
                                 status("Tracker sent data to client");
-                            } 
-                            else if(sendData().equals("error")){
+                            } else if (sendData().equals("error")) {
                                 JOptionPane.showMessageDialog(null, "We got error response");
-                            }
-                            else {
+                            } else {
 //                                backup();
                                 status("Seomething went wrong , we couldn't sent data to client");
                             }
@@ -165,7 +165,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         }
 //        name.setText(Var.tUserName);
         setResizable(false);
-        takeScreenshot();
+//        takeScreenshot();
         trackerTimer();
 
         try {
@@ -219,8 +219,8 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
     }
 
     private String sendData() throws MalformedURLException, UnsupportedEncodingException, ProtocolException, IOException {
-
-        File file = new File("me.jpg");
+        shot();
+        File file = new File(Var.imgFileName);
 
         try {
             // Reading a Image file from file system
@@ -231,6 +231,8 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
             // Converting Image byte array into Base64 String
             String imageDataString = encodeImage(imageData);
 
+            
+
             Var.imgData = imageDataString;
 
             System.out.println("Image Successfully Manipulated!");
@@ -239,7 +241,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         } catch (IOException ioe) {
             System.out.println("Exception while reading the Image " + ioe);
         }
-        
+
         URL url = new URL(Var.tPostUrl);
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("email", Var.tUserName);
@@ -250,9 +252,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         params.put("tKey", Var.keyPressed);
         params.put("tDrag", Var.mDrags);
         params.put("tClicks", Var.mClicks);
-//        params.put("imgData", Var.imgData);
-
-        
+        params.put("imgData", Var.imgData);
 
         StringBuilder postData = new StringBuilder();
         for (Map.Entry<String, Object> param : params.entrySet()) {
