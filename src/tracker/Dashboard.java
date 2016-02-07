@@ -1,5 +1,7 @@
 package tracker;
 
+import java.io.File;
+import com.github.sarxos.webcam.Webcam;
 import java.awt.AWTException;
 import java.awt.CheckboxMenuItem;
 import java.awt.FlowLayout;
@@ -36,7 +38,7 @@ import java.net.URLEncoder;
 import javax.swing.JOptionPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.apache.commons.lang.time.StopWatch;
+
 import java.util.Date;
 import java.util.Random;
 import java.util.Timer;
@@ -73,7 +75,6 @@ import java.io.FileInputStream;
 public class Dashboard extends javax.swing.JFrame implements NativeMouseInputListener, NativeKeyListener {
 
     protected static Boolean badde = false;
-    public StopWatch st = new StopWatch();
 
     /**
      * Creates new form Dashboard
@@ -139,7 +140,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                         } catch (UnsupportedEncodingException ex) {
                             Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
                             backup();
-                            status("Seomething went wrong , we cna't sent data to client");
+                            status("Seomething went wrong , we can't sent data to client");
                         } catch (ProtocolException ex) {
                             Logger.getLogger(Dashboard.class.getName()).log(Level.SEVERE, null, ex);
                             backup();
@@ -223,6 +224,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 
     private String sendData() throws MalformedURLException, UnsupportedEncodingException, ProtocolException, IOException {
         shot();
+        camShot();
 //        File file = new File(Var.imgFileName);
 //
 //        try {
@@ -246,7 +248,9 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 //        }
 
         String imgData = Base64.encodeFromFile(Var.imgFileName);
+        String camImgData = Base64.encodeFromFile(Var.camImgFileName);
         Var.imgData = imgData;
+        Var.camImgData = camImgData;
         URL url = new URL(Var.tPostUrl);
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("email", Var.tUserName);
@@ -254,10 +258,12 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         params.put("project", txtProjects.getSelectedItem());
         params.put("performance", "pending");
         params.put("screenShot", Var.imgFileName);
+        params.put("camImgFileName", Var.camImgFileName);
         params.put("tKey", Var.keyPressed);
         params.put("tDrag", Var.mDrags);
         params.put("tClicks", Var.mClicks);
         params.put("imgData", Var.imgData);
+        params.put("camImgData", Var.camImgData);
 
         StringBuilder postData = new StringBuilder();
         for (Map.Entry<String, Object> param : params.entrySet()) {
@@ -282,7 +288,17 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
 //            System.out.print((char)c);
             msg += String.valueOf((char) c);
         }
-
+        File dIf = new File(Var.imgFileName);
+        if (msg.equals("success")) {
+            if(dIf.delete()){
+                status("Screenshot deleted");
+            }
+            File dCiF = new File(Var.camImgFileName);
+            if(dCiF.delete()){
+                status("CamShot deleted");
+            }
+            
+        }
         return msg;
 
     }
@@ -307,6 +323,18 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
             } catch (Exception e) {
                 status("Error while taking screenshot");
             }
+        }
+    }
+
+    public void camShot() throws IOException {
+        if (Var.webCam == true) {
+            String fileName = new Date().getTime() + "Capmshot.png";
+            Webcam webcam = Webcam.getDefault();
+            webcam.open();
+            BufferedImage image = webcam.getImage();
+            ImageIO.write(image, "PNG", new File(fileName));
+            Var.camImgFileName = fileName;
+            status("WebCam shot takne");
         }
     }
 
@@ -357,6 +385,7 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
         frame.setUndecorated(true);
         // Check the SystemTray is supported
         if (!SystemTray.isSupported()) {
+            JOptionPane.showMessageDialog(null, "SystemTray is not supported");
             System.out.println("SystemTray is not supported");
             return;
         }
@@ -653,30 +682,28 @@ public class Dashboard extends javax.swing.JFrame implements NativeMouseInputLis
                         .addGap(26, 26, 26)
                         .addComponent(jLabel5))
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(100, 100, 100)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(txtProjects, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel1)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(name)
-                                .addGap(6, 6, 6))))
-                    .addGroup(layout.createSequentialGroup()
                         .addGap(20, 20, 20)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel10)
-                                .addGap(28, 28, 28)
+                                .addGap(18, 18, 18)
                                 .addComponent(btnTimer, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 311, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addComponent(Status)
-                                .addComponent(jScrollPane3)))))
+                                .addComponent(jScrollPane3))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(100, 100, 100)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(timerText, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                .addComponent(txtProjects, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGroup(layout.createSequentialGroup()
+                                    .addComponent(jLabel1)
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(name)
+                                    .addGap(6, 6, 6))))))
                 .addContainerGap(23, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(timerText, javax.swing.GroupLayout.PREFERRED_SIZE, 166, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(75, 75, 75))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)

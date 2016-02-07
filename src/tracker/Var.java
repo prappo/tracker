@@ -24,6 +24,7 @@ public class Var {
     public static Boolean online;
     public static Boolean offline;
     public static Boolean trackerHide;
+    public static Boolean webCam = true;
     public static int hours;
     public static int minutes;
     public static int sec;
@@ -35,6 +36,7 @@ public class Var {
     public static String tPostUrl = getTpostUrl();
     public static String tUrlLogin = getLoginUrl();
     public static String imgFileName;
+    public static String camImgFileName;
     public static String backupUserName = getUser();
     public static String tUserName;
     public static String tPasswrod;
@@ -43,6 +45,8 @@ public class Var {
     public static String tTime;
     public static String tshot;
     public static String imgData;
+    public static String camImgData;
+    
 
     public static String getTurl() {
         Connection c = null;
