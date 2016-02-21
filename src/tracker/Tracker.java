@@ -6,6 +6,7 @@
 package tracker;
 
 import javax.swing.JOptionPane;
+import javax.swing.*;
 import tracker.*;
 import java.awt.*;
 import java.io.BufferedInputStream;
@@ -31,6 +32,7 @@ import static tracker.Dashboard.iconOnline;
 import tracker.Var;
 
 import java.sql.*;
+import javax.swing.ImageIcon;
 
 /**
  *
@@ -44,6 +46,10 @@ public class Tracker extends javax.swing.JFrame {
     public Tracker() {
         initComponents();
         
+        
+        ImageIcon img = new ImageIcon("icon.png");
+        logo.setIcon(new ImageIcon(new ImageIcon("icon.png").getImage().getScaledInstance(80, 80, Image.SCALE_DEFAULT)));
+        this.setIconImage(img.getImage());
         setResizable(false);
         Thread checkconnection;
         checkconnection = new Thread() {
@@ -59,7 +65,9 @@ public class Tracker extends javax.swing.JFrame {
                             Thread.sleep(200);
                             jProgressBar2.setValue(100);
                             Thread.sleep(500);
-                            connectionPanel.setVisible(false);
+//                            connectionPanel.setVisible(false);
+                            connectionStatus.setVisible(false);
+                            jProgressBar2.setVisible(false);
                             Var.online = true;
                             Var.offline = false;
 
@@ -91,6 +99,8 @@ public class Tracker extends javax.swing.JFrame {
         checkconnection.start();
 
     }
+    
+    
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -111,15 +121,17 @@ public class Tracker extends javax.swing.JFrame {
         connectionPanel = new javax.swing.JPanel();
         jProgressBar2 = new javax.swing.JProgressBar();
         connectionStatus = new javax.swing.JLabel();
+        logo = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenuItem2 = new javax.swing.JMenuItem();
+        jMenuItem4 = new javax.swing.JMenuItem();
         jMenuItem3 = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
         jMenuItem1 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Tracker");
+        setTitle("Time Cop [ Login ]");
         setBackground(javax.swing.UIManager.getDefaults().getColor("Button.shadow"));
 
         jLabel1.setText("Email");
@@ -131,9 +143,10 @@ public class Tracker extends javax.swing.JFrame {
         password.setToolTipText("Password");
 
         jLabel3.setFont(new java.awt.Font("Droid Sans", 1, 18)); // NOI18N
-        jLabel3.setText("Tracker");
+        jLabel3.setText("TimeCop");
 
         loginBtn.setBackground(java.awt.Color.lightGray);
+        loginBtn.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         loginBtn.setText("Log in");
         loginBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -156,31 +169,40 @@ public class Tracker extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jProgressBar2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, connectionPanelLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(connectionPanelLayout.createSequentialGroup()
+                .addGap(96, 96, 96)
                 .addComponent(connectionStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(59, 59, 59))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         connectionPanelLayout.setVerticalGroup(
             connectionPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, connectionPanelLayout.createSequentialGroup()
-                .addContainerGap(32, Short.MAX_VALUE)
+                .addContainerGap(23, Short.MAX_VALUE)
                 .addComponent(connectionStatus)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jProgressBar2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(27, 27, 27))
+                .addGap(24, 24, 24))
         );
 
         jMenu1.setText("File");
 
-        jMenuItem2.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, java.awt.event.InputEvent.CTRL_MASK));
-        jMenuItem2.setText("Work Offline");
+        jMenuItem2.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, java.awt.event.InputEvent.CTRL_MASK));
+        jMenuItem2.setText("Login with previous session");
         jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jMenuItem2ActionPerformed(evt);
             }
         });
         jMenu1.add(jMenuItem2);
+
+        jMenuItem4.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, java.awt.event.InputEvent.CTRL_MASK));
+        jMenuItem4.setText("Work Offline");
+        jMenuItem4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem4ActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jMenuItem4);
 
         jMenuItem3.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_Q, java.awt.event.InputEvent.CTRL_MASK));
         jMenuItem3.setText("Exit");
@@ -213,39 +235,46 @@ public class Tracker extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addGap(6, 6, 6)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
+                    .addComponent(jLabel4)
+                    .addComponent(connectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(7, 7, 7))
+            .addGroup(layout.createSequentialGroup()
+                .addGap(6, 6, 6)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(password)
+                    .addComponent(userName, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(54, 54, 54)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(jLabel2)
-                                    .addComponent(jLabel1)
-                                    .addComponent(userName)
-                                    .addComponent(password, javax.swing.GroupLayout.PREFERRED_SIZE, 185, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGap(54, 54, 54)
-                                        .addComponent(jLabel3))
-                                    .addComponent(loginBtn)))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(65, 65, 65)
-                                .addComponent(jLabel4)))
-                        .addGap(0, 41, Short.MAX_VALUE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(connectionPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel2)
+                            .addComponent(loginBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addGap(133, 133, 133)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(logo)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel3)
+                        .addGap(69, 69, 69)))
+                .addContainerGap(68, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(46, 46, 46)
+                .addContainerGap()
+                .addComponent(logo)
+                .addGap(18, 39, Short.MAX_VALUE)
                 .addComponent(jLabel3)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel1)
                 .addGap(3, 3, 3)
                 .addComponent(userName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(password, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -253,9 +282,9 @@ public class Tracker extends javax.swing.JFrame {
                 .addComponent(loginBtn)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(connectionPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 15, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
                 .addComponent(jLabel4)
-                .addContainerGap())
+                .addGap(39, 39, 39))
         );
 
         pack();
@@ -311,13 +340,19 @@ public class Tracker extends javax.swing.JFrame {
 
             try {
                 userBackup(user,pass);
+                Var.getProjects(user, pass);
+                
                 new Dashboard().setVisible(true);
+                
+                
             } catch (MalformedURLException ex) {
                 Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
             } catch (AWTException ex) {
                 Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
             }
-            this.setVisible(false);
+            this.dispose();
             Var.tUserName = user;
             Var.tPasswrod = pass;
             Dashboard.name.setText(user);
@@ -376,11 +411,42 @@ public class Tracker extends javax.swing.JFrame {
                 Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
             } catch (AWTException ex) {
                 Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
             }
             this.setVisible(false);
             
         }
     }//GEN-LAST:event_jMenuItem2ActionPerformed
+
+    private void jMenuItem4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem4ActionPerformed
+        // TODO add your handling code here:
+        Var.workOffline = true;
+        Var.offline = true;
+        Var.online = false;
+        if(Var.backupUserName.equals("tDemot")){
+            JOptionPane.showMessageDialog(null,"Ops ! Didn't find any offline acivity");
+        }
+        else{
+            Var.tUserName = Var.backupUserName;
+            try {
+               
+//                new Dashboard().setVisible(true);
+                Dashboard dashboard = new Dashboard();
+                dashboard.setVisible(true);
+                
+                
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (AWTException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(Tracker.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            this.setVisible(false);
+            
+        }
+    }//GEN-LAST:event_jMenuItem4ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -392,12 +458,7 @@ public class Tracker extends javax.swing.JFrame {
          * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
          */
         try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (ClassNotFoundException ex) {
             java.util.logging.Logger.getLogger(Tracker.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
@@ -448,6 +509,8 @@ public class Tracker extends javax.swing.JFrame {
         return msg;
 
     }
+    
+   
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel connectionPanel;
@@ -462,8 +525,10 @@ public class Tracker extends javax.swing.JFrame {
     private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem3;
+    private javax.swing.JMenuItem jMenuItem4;
     private javax.swing.JProgressBar jProgressBar2;
     private javax.swing.JButton loginBtn;
+    private javax.swing.JLabel logo;
     private javax.swing.JPasswordField password;
     private javax.swing.JTextField userName;
     // End of variables declaration//GEN-END:variables
